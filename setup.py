@@ -1,15 +1,14 @@
 from setuptools import setup
 
-setup(name='slackclient',
+setup(name='slackclient-asyncio',
       version='0.16',
-      description='Python client for Slack.com',
-      url='http://github.com/slackhq/python-slackclient',
+      description='Python client for Slack.com using asyncio library',
+      url='http://github.com/slackhq/python-slackclient-asyncio',
       author='Ryan Huber',
       author_email='ryan@slack-corp.com',
       license='MIT',
-      packages=['slackclient'],
+      packages=['slackclient_asyncio'],
       install_requires=[
-        'websocket-client',
-        'future',
+        'websockets',
       ],
       zip_safe=False)

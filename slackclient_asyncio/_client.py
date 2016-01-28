@@ -1,30 +1,34 @@
 #!/usr/bin/python
 # mostly a proxy object to abstract how some of this works
 
+import asyncio
 import json
 
-from slackclient._server import Server
+from slackclient_asyncio._server import Server
 
 class SlackClient(object):
     def __init__(self, token):
         self.token = token
         self.server = Server(self.token, False)
 
+    @asyncio.coroutine
     def rtm_connect(self):
         try:
-            self.server.rtm_connect()
+            yield from self.server.rtm_connect()
             return True
         except:
             return False
 
+    @asyncio.coroutine
     def api_call(self, method, **kwargs):
         return self.server.api_call(method, **kwargs)
 
+    @asyncio.coroutine
     def rtm_read(self):
         # in the future, this should handle some events internally i.e. channel
         # creation
         if self.server:
-            json_data = self.server.websocket_safe_read()
+            json_data = yield from self.server.websocket_safe_read()
             data = []
             if json_data != '':
                 for d in json_data.split('\n'):
@@ -35,8 +39,10 @@ class SlackClient(object):
         else:
             raise SlackNotConnected
 
+    @asyncio.coroutine
     def rtm_send_message(self, channel, message):
-        return self.server.channels.find(channel).send_message(message)
+        res = yield from self.server.channels.find(channel).send_message(message)
+        return res
 
     def process_changes(self, data):
         if "type" in data.keys():

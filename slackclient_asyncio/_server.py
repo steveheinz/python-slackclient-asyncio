@@ -1,11 +1,13 @@
-from slackclient._slackrequest import SlackRequest
-from slackclient._channel import Channel
-from slackclient._user import User
-from slackclient._util import SearchList
 from ssl import SSLError
-
-from websocket import create_connection
+import asyncio
 import json
+
+import websockets
+
+from slackclient_asyncio._slackrequest import SlackRequest
+from slackclient_asyncio._channel import Channel
+from slackclient_asyncio._user import User
+from slackclient_asyncio._util import SearchList
 
 
 class Server(object):
@@ -39,8 +41,9 @@ class Server(object):
     def __repr__(self):
         return self.__str__()
 
+    @asyncio.coroutine
     def rtm_connect(self, reconnect=False):
-        reply = self.api_requester.do(self.token, "rtm.start")
+        reply = yield from self.api_requester.do(self.token, "rtm.start")
         if reply.code != 200:
             raise SlackConnectionError
         else:
@@ -49,7 +52,7 @@ class Server(object):
                 self.ws_url = login_data['url']
                 if not reconnect:
                     self.parse_slack_login_data(login_data)
-                self.connect_slack_websocket(self.ws_url)
+                yield from self.connect_slack_websocket(self.ws_url)
             else:
                 raise SlackLoginError
 
@@ -62,10 +65,10 @@ class Server(object):
         self.parse_channel_data(login_data["ims"])
         self.parse_user_data(login_data["users"])
 
+    @asyncio.coroutine
     def connect_slack_websocket(self, ws_url):
         try:
-            self.websocket = create_connection(ws_url)
-            self.websocket.sock.setblocking(0)
+            self.websocket = yield from websockets.connect(ws_url)
         except:
             raise SlackConnectionError
 
@@ -87,17 +90,20 @@ class Server(object):
                 user["real_name"] = user["name"]
             self.attach_user(user["name"], user["id"], user["real_name"], user["tz"])
 
+    @asyncio.coroutine
     def send_to_websocket(self, data):
         """Send (data) directly to the websocket."""
         try:
             data = json.dumps(data)
-            self.websocket.send(data)
+            yield from self.websocket.send(data)
         except:
-            self.rtm_connect(reconnect=True)
+            yield from self.rtm_connect(reconnect=True)
 
     def ping(self):
-        return self.send_to_websocket({"type": "ping"})
+        res = yield from self.send_to_websocket({"type": "ping"})
+        return res
 
+    @asyncio.coroutine
     def websocket_safe_read(self):
         """ Returns data if available, otherwise ''. Newlines indicate multiple
             messages
@@ -106,7 +112,8 @@ class Server(object):
         data = ""
         while True:
             try:
-                data += "{}\n".format(self.websocket.recv())
+                raw_data = yield from self.websocket.recv()
+                data += "{}\n".format(raw_data)
             except SSLError as e:
                 if e.errno == 2:
                     # errno 2 occurs when trying to read or write data, but more
@@ -128,11 +135,13 @@ class Server(object):
             self.channels.append(Channel(self, name, id, members))
 
     def join_channel(self, name):
-        print(self.api_requester.do(self.token,
-                                    "channels.join?name={}".format(name)).read())
+        res = yield from self.api_requester.do(self.token,
+                                    "channels.join?name={}".format(name))
+        print(res.read())
 
+    @asyncio.coroutine
     def api_call(self, method, **kwargs):
-        reply = self.api_requester.do(self.token, method, kwargs)
+        reply = yield from self.api_requester.do(self.token, method, kwargs)
         return reply.read()
 
 

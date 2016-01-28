@@ -1,7 +1,7 @@
 import pytest
-from slackclient._channel import Channel
-from slackclient._server import Server
-from slackclient._client import SlackClient
+from slackclient_asyncio._channel import Channel
+from slackclient_asyncio._server import Server
+from slackclient_asyncio._client import SlackClient
 
 @pytest.fixture
 def server(monkeypatch):

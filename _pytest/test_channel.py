@@ -1,4 +1,4 @@
-from slackclient._channel import Channel
+from slackclient_asyncio._channel import Channel
 import pytest
 
 def test_Channel(channel):

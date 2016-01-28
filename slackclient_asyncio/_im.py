@@ -1,12 +1,13 @@
-class Channel(object):
-    def __init__(self, server, name, id, members=[]):
+import asyncio
+
+class Im(object):
+    def __init__(self, server, user, id):
         self.server = server
-        self.name = name
+        self.user = user
         self.id = id
-        self.members = members
 
     def __eq__(self, compare_str):
-        if self.name == compare_str or self.name == "#" + compare_str or self.id == compare_str:
+        if self.id == compare_str or self.user == compare_str:
             return True
         else:
             return False
@@ -14,13 +15,15 @@ class Channel(object):
     def __str__(self):
         data = ""
         for key in list(self.__dict__.keys()):
-            data += "{} : {}\n".format(key, str(self.__dict__[key])[:40])
+            if key != "server":
+                data += "{} : {}\n".format(key, str(self.__dict__[key])[:40])
         return data
 
     def __repr__(self):
         return self.__str__()
 
+    @asyncio.coroutine
     def send_message(self, message):
         message_json = {"type": "message", "channel": self.id, "text": message}
-        self.server.send_to_websocket(message_json)
+        yield from self.server.send_to_websocket(message_json)
 
